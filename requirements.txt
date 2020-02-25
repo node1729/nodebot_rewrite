@@ -1,0 +1,4 @@
+certifi==2019.11.28
+py-dateutil==2.2
+six==1.12.0
+urllib3==1.25.8

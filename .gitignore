@@ -1,0 +1,11 @@
+# bot generated files
+*.log
+*.json
+*.txt
+!requirements.txt
+
+# dev files
+nodebotv2.py
+nodebot_api.py
+.vscode/
+nbot/
