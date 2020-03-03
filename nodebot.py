@@ -79,6 +79,7 @@ def part_channel(chan):
 
 # -------------------------------------------------- Magic ---------------------------------------------------------
 
+# Load the commands file, if no commands exist, fill it with a default list of commands
 commands = json.load(command_file)
 if not commands:
     commands = {
@@ -112,6 +113,7 @@ if not commands:
                 }
     update_commands_file()
 
+# updates the commands file to reflect the current state of the commands. Sorts all commands alphabetically
 def update_commands_file():
     command_file.seek(0)
     command_file.truncate() # remove all text in the command file, which is "{}" at this moment
@@ -120,25 +122,74 @@ def update_commands_file():
     command_file.flush()
 
 def text_command(command):
-    send_message(CHAN, commands[command]["return"])
+    # TODO: All magic that will allow this to work by finding {}s and output properly formatted output_text
+    # Got file handling working
+    # TODO: Find a more elegant solution to this
+    finder = re.compile(r"(?<=\{)(.*?)(?=\})") # Regex command to find all variables within {}
+    found = finder.finditer(commands[command]["return"])
+    input_text = finder.split(commands[command]["return"])
+    output_text = []
+    for item in input_text: # especially with this shit
+        if item[-1] == "{":
+            item = item[:-1]
+        if item[0] == "}":
+            item = item[1:]
+        output_text.append(item)
+    print(output_text)
+    for item in found:
+        # print(item.group(0))
+        flags = re.split(":", item.group(0))
+        if flags[0] == "file":
+            output = read_text_file(command, flags[1])
+            for index, text in enumerate(output_text):
+                if text == item.group(0):
+                    output_text[index] = output
+    
+    text_out = ""
+    for item in output_text:
+        text_out = text_out + item
+    send_message(CHAN, text_out)
+    
+# Returns a random line from the text file, unless command is indexed
+# If command is indexed, and no index is provided, the index is returned
+# while the line chosen is random. Otherwise the line at the index is returned
+def read_text_file(command, file_to_read, count_lines=False):
+    infile = open(file_to_read)
+    lines = infile.readlines()
+    if count_lines:
+        return len(lines) - 1 # - 1 to ensure the maximum value is interpreted by end users correctly
+    if commands[command]["indexed"]:
+        index = getInteger(message[len(command) + 1:])
+        if index >= 0 and index < len(lines) and not isinstance(index, bool):
+            pass
+        else:
+            index = random.randrange(0, len(lines))
+        output = str(index) + ": " + lines[index]
+    else:
+        output = random.choice(lines)
+    return output
+
 
 def text_file_command(command):
     # start by finding all regex expressions for math, files, etc
     # this regex commands finds all text between { and }
     # TODO: implement the rest of the message into the output, including random and math
-    found = re.findall(r"(?<=\{)(.*?)(?=\})", commands[command]["return"]) 
+    finder = re.compile(r"(?<=\{)(.*?)(?=\})")
+    found = finder.findall(commands[command]["return"]) 
     for item in found: 
         if item[:5] == "file:":
-            infile = item[5:]
             break
     input_file = open(infile)
     lines = input_file.readlines()
     if commands[command]["indexed"]:
         index = getInteger(message[len(command + " "):])
-        if index >= 0 and index < len(lines) and isinstance(index, int):
-            output = lines[index]
+        print("INDEX: " + str(index))
+        if index >= 0 and index < len(lines) and not isinstance(index, bool): # Python classifies bools as ints
+            output = lines[index]                                             # but not ints as bools
+            print(index)
         else:
-            output = random.choice(lines)
+            index = random.randrange(0,len(lines))
+            output = lines[index]
     else:
         output = random.choice(lines)
     send_message(CHAN, output)
@@ -149,7 +200,7 @@ def do_command(command):
     if commands[command]["type"] == "text":
         text_command(command)
     elif commands[command]["type"] == "text-file":
-        text_file_command(command)
+        text_command(command)
                 
     
         
@@ -177,7 +228,7 @@ def addcom(edit=False):
         else:
             commands[command_name] = {"type": command_type, "return": command_output}
             update_commands_file()
-            print(repr(commands))
+            #print(repr(commands))
             if edit: send_message(CHAN, "Command %s successfully edited" % (command_name))
             else: send_message(CHAN, "Command %s successfully added" % (command_name))
 
@@ -216,7 +267,7 @@ def get_message(msg):
     while i < length:
         result += msg[i] + " "
         i += 1
-    print(user_command_level)
+    #print(user_command_level)
     result = result[1:]
     return result
 
@@ -274,7 +325,7 @@ while True:
             connect()
 
         data_split = re.split(r"[~\r\n]+", data)
-        print(data_split)
+        #print(data_split)
         data = data_split.pop()
 
         if data_split[0][:4] != "PING":
@@ -295,7 +346,7 @@ while True:
                 except IndexError:
                     data_split_dict[item[0]] = ""
 
-        print(data_split_dict)
+        #print(data_split_dict)
         #default user level
         user_command_level = 10
         if "user-type" in data_split_dict:
