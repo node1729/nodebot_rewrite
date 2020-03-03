@@ -169,31 +169,6 @@ def read_text_file(command, file_to_read, count_lines=False):
         output = random.choice(lines)
     return output
 
-
-def text_file_command(command):
-    # start by finding all regex expressions for math, files, etc
-    # this regex commands finds all text between { and }
-    # TODO: implement the rest of the message into the output, including random and math
-    finder = re.compile(r"(?<=\{)(.*?)(?=\})")
-    found = finder.findall(commands[command]["return"]) 
-    for item in found: 
-        if item[:5] == "file:":
-            break
-    input_file = open(infile)
-    lines = input_file.readlines()
-    if commands[command]["indexed"]:
-        index = getInteger(message[len(command + " "):])
-        print("INDEX: " + str(index))
-        if index >= 0 and index < len(lines) and not isinstance(index, bool): # Python classifies bools as ints
-            output = lines[index]                                             # but not ints as bools
-            print(index)
-        else:
-            index = random.randrange(0,len(lines))
-            output = lines[index]
-    else:
-        output = random.choice(lines)
-    send_message(CHAN, output)
-
 def do_command(command):
     if commands[command]["type"] == "alias": # jumps all the way down to final alias
         command = commands[command]["return"]
